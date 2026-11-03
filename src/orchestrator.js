@@ -55,6 +55,7 @@ class Orchestrator extends EventEmitter {
       capabilities: a.capabilities, costSource: a.costSource,
       simulated: a.type === 'mock',
       lastOkAt: st.connectedAt || null,
+      model: a.cfg ? a.cfg.model || '' : '',
     };
   }
 

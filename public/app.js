@@ -260,7 +260,7 @@
       cb.checked = sel.has(a.id) && usable;
       cb.disabled = !usable || !S.conv;
       cb.addEventListener('change', () => toggleParticipant(a.id, cb.checked));
-      chip.append(cb, el('span', 'dot'), el('span', 'agent-name', a.name), el('span', 'agent-status', a.simulated ? 'Giả lập' : AGENT_STATUS[a.status]));
+      chip.append(cb, el('span', 'dot'), el('span', 'agent-name', a.name), el('span', 'agent-model', a.model || ''), el('span', 'agent-status', a.simulated ? 'Giả lập' : AGENT_STATUS[a.status]));
       if (a.status !== 'not_connected') {
         const t = el('button', 'icon test', '⟳');
         t.title = 'Kiểm tra kết nối (tốn 1 lượt gọi ngắn)';

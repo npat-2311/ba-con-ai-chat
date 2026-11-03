@@ -18,9 +18,9 @@
       "id": "gemini",
       "name": "Gemini",
       "type": "gemini-api",
-      "model": "gemini-2.5-flash",
+      "model": "gemini-3.8-flash",
       "apiKeyEnv": "GEMINI_API_KEY",
-      "generationConfig": { "thinkingConfig": { "thinkingBudget": 0 } },
+      "thinkingLevel": "low",
       "costSource": "Gemini API bậc miễn phí (Google được dùng dữ liệu để cải thiện sản phẩm)"
     },
     {
