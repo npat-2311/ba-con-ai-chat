@@ -17,6 +17,7 @@
         <button id="newConv">+ Trò chuyện</button>
         <button id="newProject">+ Dự án</button>
       </div>
+      <button id="openSettings" class="settings-btn">⚙ Kết nối AI</button>
       <nav id="tree" class="tree"></nav>
       <label class="archived-toggle"><input type="checkbox" id="showArchived"> Hiện mục đã lưu trữ</label>
     </aside>
@@ -31,6 +32,7 @@
         </div>
       </header>
 
+      <section class="settings-view" id="settingsView" hidden></section>
       <section class="agents" id="agents" aria-label="AI tham gia"></section>
       <div class="stats" id="stats"></div>
       <details class="summary" id="summaryBox" hidden>
@@ -73,5 +75,6 @@
   </dialog>
   <script src="/markdown.js"></script>
   <script src="/app.js"></script>
+  <script src="/settings.js"></script>
 </body>
 </html>

@@ -8,15 +8,19 @@ const { newId } = require('./store');
 const SCOPES = ['read', 'write', 'control'];
 const IDEMPOTENCY_TTL_MS = 24 * 3600 * 1000;
 
-function makeV1Api({ store, orch, apiKeys }) {
-  const keys = (apiKeys || []).filter((k) => k && k.id && typeof k.key === 'string' && k.key.length >= 24 && !/^THAY-/.test(k.key));
+// apiKeys: khóa trong config.json (dạng gốc). getExtraKeys(): khóa tạo trên giao diện (chỉ lưu mã băm SHA-256).
+function makeV1Api({ store, orch, apiKeys, getExtraKeys = () => [] }) {
+  const fileKeys = (apiKeys || []).filter((k) => k && k.id && typeof k.key === 'string' && k.key.length >= 24 && !/^THAY-/.test(k.key));
+  const sha = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
   const hits = new Map(); // keyId -> [timestamps]
 
   function authenticate(req) {
     const h = req.headers.authorization || '';
     const m = h.match(/^Bearer\s+(.+)$/i);
     if (!m) throw new AppError(401, 'unauthorized', 'Thiếu header Authorization: Bearer <key>');
-    const k = keys.find((x) => safeEqual(x.key, m[1].trim()));
+    const token = m[1].trim();
+    const tokenHash = sha(token);
+    const k = fileKeys.find((x) => safeEqual(x.key, token)) || getExtraKeys().find((x) => safeEqual(x.hash, tokenHash));
     if (!k) throw new AppError(401, 'unauthorized', 'API key không hợp lệ');
     const now = Date.now();
     const list = (hits.get(k.id) || []).filter((t) => now - t < 60_000);

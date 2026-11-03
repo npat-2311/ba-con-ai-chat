@@ -32,6 +32,14 @@ class Orchestrator extends EventEmitter {
     this.loops = new Map(); // sessionId -> Promise của vòng lặp, dùng cho kiểm thử
   }
 
+  // Thay danh sách adapter khi cài đặt thay đổi. Lượt gọi đang chạy vẫn giữ adapter cũ tới khi xong.
+  setAdapters(adapters, resetIds = []) {
+    this.adapters = new Map(adapters.map((a) => [a.id, a]));
+    for (const id of resetIds) delete this.store.data.agentState[id];
+    this.store.save();
+    this.emit('event', { type: 'agents', payload: this.agents() });
+  }
+
   // ---------- Trạng thái AI ----------
   agentInfo(a) {
     const conf = a.isConfigured();

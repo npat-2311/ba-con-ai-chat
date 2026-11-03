@@ -8,6 +8,8 @@ const { buildAdapters } = require('./src/adapters');
 const { Orchestrator } = require('./src/orchestrator');
 const { makeUiApi } = require('./src/api-ui');
 const { makeV1Api } = require('./src/api-v1');
+const { Settings } = require('./src/settings');
+const { Jobs, authStatus } = require('./src/jobs');
 const { send, sendError, safeEqual } = require('./src/http-util');
 
 const ROOT = __dirname;
@@ -32,8 +34,10 @@ function loadConfig(argv) {
       { id: 'claude', name: 'Claude', type: 'mock', delayMs: 500, agreeFromRound: 3 },
     ];
     cfg.dataFile = path.join(ROOT, 'data', 'mock-db.json');
+    cfg.settingsFile = path.join(ROOT, 'data', 'mock-settings.json');
   }
   cfg.dataFile = cfg.dataFile || path.join(ROOT, 'data', 'db.json');
+  if (cfg.settingsFile === undefined) cfg.settingsFile = path.join(ROOT, 'data', 'settings.json');
   cfg.mock = mock;
   return cfg;
 }
@@ -41,9 +45,12 @@ function loadConfig(argv) {
 function createApp(cfg) {
   const store = new Store(cfg.dataFile);
   store.recoverAfterRestart();
-  const orch = new Orchestrator(store, buildAdapters(cfg.agents), cfg.limits);
-  const uiApi = makeUiApi({ store, orch });
-  const v1Api = makeV1Api({ store, orch, apiKeys: cfg.apiKeys });
+  const settings = new Settings(cfg.settingsFile || null, cfg.agents);
+  const orch = new Orchestrator(store, buildAdapters(settings.effectiveAgents()), cfg.limits);
+  const rebuild = (resetIds) => orch.setAdapters(buildAdapters(settings.effectiveAgents()), resetIds);
+  const jobs = new Jobs();
+  const uiApi = makeUiApi({ store, orch, settings, jobs, authStatus, rebuild });
+  const v1Api = makeV1Api({ store, orch, apiKeys: cfg.apiKeys, getExtraKeys: () => settings.data.apiKeys });
   const openapi = fs.readFileSync(path.join(ROOT, 'docs', 'openapi.json'), 'utf8');
   const allowedHosts = new Set((cfg.allowedHosts || []).map((h) => h.toLowerCase()));
 
@@ -112,7 +119,7 @@ function createApp(cfg) {
       sendError(res, e, res.getHeader('x-request-id'));
     }
   });
-  return { server, store, orch };
+  return { server, store, orch, settings };
 }
 
 if (require.main === module) {
