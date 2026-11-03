@@ -1,0 +1,34 @@
+{
+  "_ghi_chu": "Dán một trong các mục dưới đây vào mảng agents của config.json. Chỉ bật sau khi đã tự kiểm tra endpoint tương thích. Sau đó bấm nút ⟳ trên giao diện để xác minh bằng 1 lượt gọi.",
+  "vi_du": [
+    {
+      "id": "ollama",
+      "name": "Llama (Ollama trên máy)",
+      "type": "openai-compat",
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "model": "llama3.2",
+      "stream": true,
+      "costSource": "Chạy trên máy bạn, không tốn phí"
+    },
+    {
+      "id": "agent-noi-bo",
+      "name": "Agent nội bộ",
+      "type": "openai-compat",
+      "baseUrl": "http://127.0.0.1:9000/v1",
+      "model": "agent-v1",
+      "apiKeyEnv": "AGENT_NOI_BO_KEY",
+      "stream": false,
+      "costSource": "Theo agent của bạn"
+    },
+    {
+      "id": "lenh-rieng",
+      "name": "Script riêng",
+      "type": "cli",
+      "preset": "text",
+      "command": "/duong/dan/toi/script",
+      "args": ["--model", "{model}"],
+      "model": "mac-dinh",
+      "costSource": "Theo script"
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "host": "127.0.0.1",
+  "port": 8787,
+  "uiPassword": "",
+  "allowedHosts": [],
+  "limits": {
+    "maxConcurrentSessions": 2,
+    "callTimeoutSec": 180,
+    "replyWords": "60–100",
+    "maxOutputTokens": 400,
+    "synthesisMaxOutputTokens": 900,
+    "recentMessages": 8,
+    "summaryThresholdChars": 12000,
+    "synthesisOrder": ["claude", "chatgpt", "gemini"]
+  },
+  "agents": [
+    {
+      "id": "gemini",
+      "name": "Gemini",
+      "type": "gemini-api",
+      "model": "gemini-2.5-flash",
+      "apiKeyEnv": "GEMINI_API_KEY",
+      "generationConfig": { "thinkingConfig": { "thinkingBudget": 0 } },
+      "costSource": "Gemini API bậc miễn phí (Google được dùng dữ liệu để cải thiện sản phẩm)"
+    },
+    {
+      "id": "chatgpt",
+      "name": "ChatGPT",
+      "type": "cli",
+      "preset": "codex",
+      "model": "",
+      "reasoningEffort": "low",
+      "costSource": "Hạn mức gói ChatGPT qua Codex CLI"
+    },
+    {
+      "id": "claude",
+      "name": "Claude",
+      "type": "cli",
+      "preset": "claude",
+      "model": "sonnet",
+      "costSource": "Hạn mức gói Claude Pro/Max qua Claude Code CLI"
+    },
+    {
+      "id": "agent-cuc-bo",
+      "name": "Agent cục bộ (ví dụ)",
+      "type": "openai-compat",
+      "disabled": true,
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "model": "llama3.2",
+      "apiKeyEnv": "",
+      "stream": true,
+      "costSource": "Chạy trên máy bạn"
+    },
+    {
+      "id": "gemini-agy",
+      "name": "Gemini (Antigravity CLI)",
+      "type": "cli",
+      "preset": "agy",
+      "disabled": true,
+      "model": "",
+      "costSource": "Hạn mức Google AI Pro/Ultra — CẢNH BÁO rủi ro điều khoản, xem README"
+    }
+  ],
+  "apiKeys": [
+    {
+      "id": "vi-du-agent",
+      "key": "THAY-BANG-CHUOI-NGAU-NHIEN-DAI-IT-NHAT-24-KY-TU",
+      "scopes": ["read", "write", "control"],
+      "projects": ["*"],
+      "maxConcurrentSessions": 1,
+      "requestsPerMinute": 30
+    }
+  ]
+}

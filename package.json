@@ -1,0 +1,13 @@
+{
+  "name": "phong-chat-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Phòng chat AI cá nhân: Gemini, ChatGPT, Claude thảo luận nhiều vòng",
+  "type": "commonjs",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js",
+    "mock": "node server.js --mock",
+    "test": "node --test test/*.test.js"
+  }
+}

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Phòng chat AI</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Dự án và cuộc trò chuyện">
+      <div class="sidebar-head">
+        <strong>Phòng chat AI</strong>
+        <button class="icon only-mobile" id="closeSidebar" aria-label="Đóng menu">✕</button>
+      </div>
+      <div class="sidebar-actions">
+        <button id="newConv">+ Trò chuyện</button>
+        <button id="newProject">+ Dự án</button>
+      </div>
+      <nav id="tree" class="tree"></nav>
+      <label class="archived-toggle"><input type="checkbox" id="showArchived"> Hiện mục đã lưu trữ</label>
+    </aside>
+    <div class="backdrop" id="backdrop"></div>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon only-mobile" id="openSidebar" aria-label="Mở menu">☰</button>
+        <div class="title-wrap">
+          <h1 id="convTitle">Chưa chọn cuộc trò chuyện</h1>
+          <div class="sub" id="convSub"></div>
+        </div>
+      </header>
+
+      <section class="agents" id="agents" aria-label="AI tham gia"></section>
+      <div class="stats" id="stats"></div>
+      <details class="summary" id="summaryBox" hidden>
+        <summary>Tóm tắt ngữ cảnh dùng chung</summary>
+        <div id="summaryText" class="md"></div>
+      </details>
+
+      <section class="messages" id="messages" aria-live="polite"></section>
+
+      <footer class="composer" id="composer">
+        <div class="controls">
+          <label class="rounds">Số vòng tối đa
+            <select id="roundsQuick" aria-label="Chọn nhanh số vòng">
+              <option>1</option><option selected>3</option><option>5</option><option>10</option>
+              <option>20</option><option>50</option><option>100</option>
+            </select>
+            <input id="roundsInput" type="number" min="1" max="100" step="1" value="3" inputmode="numeric" aria-label="Nhập số vòng (1–100)">
+          </label>
+          <span class="hint" id="roundsHint"></span>
+          <span class="spacer"></span>
+          <button id="continueBtn" class="secondary">Thảo luận tiếp</button>
+          <button id="synthBtn" class="secondary">Chốt ý</button>
+        </div>
+        <div class="input-row">
+          <textarea id="input" rows="2" placeholder="Nhập tin nhắn… (Ctrl+Enter để gửi)"></textarea>
+          <button id="stopBtn" class="danger" hidden>Dừng</button>
+          <button id="sendBtn" class="primary">Gửi</button>
+        </div>
+        <div class="error" id="error" role="alert"></div>
+      </footer>
+    </main>
+  </div>
+
+  <dialog id="dialog">
+    <form method="dialog" id="dialogForm">
+      <h2 id="dialogTitle"></h2>
+      <div id="dialogBody"></div>
+      <div class="dialog-actions" id="dialogActions"></div>
+    </form>
+  </dialog>
+  <script src="/markdown.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

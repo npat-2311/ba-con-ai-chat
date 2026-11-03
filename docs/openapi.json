@@ -1,0 +1,80 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Phòng chat AI — API cho agent bên ngoài",
+    "version": "0.1.0",
+    "description": "Cho phép agent/công cụ khác tạo cuộc trò chuyện, gửi chủ đề thảo luận nhiều vòng, theo dõi, dừng và lấy bản chốt ý. Chỉ trao đổi văn bản; không cấp quyền chạy lệnh, sửa file, merge hay deploy."
+  },
+  "servers": [{ "url": "http://127.0.0.1:8787" }],
+  "security": [{ "bearer": [] }],
+  "components": {
+    "securitySchemes": { "bearer": { "type": "http", "scheme": "bearer", "description": "Khóa khai báo trong config.json > apiKeys. Phạm vi: read, write, control." } },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": { "error": { "type": "object", "properties": {
+          "code": { "type": "string", "enum": ["unauthorized", "forbidden", "not_found", "invalid_request", "invalid_json", "conflict", "idempotency_mismatch", "limit_exceeded", "payload_too_large", "internal_error"] },
+          "message": { "type": "string" }, "details": { "nullable": true }, "requestId": { "type": "string" } } } }
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" }, "role": { "type": "string", "enum": ["user", "agent"] },
+          "kind": { "type": "string", "enum": ["discussion", "synthesis", "summary"] },
+          "agentId": { "type": "string", "nullable": true }, "agentName": { "type": "string", "nullable": true },
+          "simulated": { "type": "boolean", "description": "true nếu là adapter giả lập" },
+          "round": { "type": "integer" },
+          "status": { "type": "string", "enum": ["waiting", "streaming", "done", "error", "cancelled", "skipped"] },
+          "content": { "type": "string" }, "error": { "type": "string", "nullable": true }
+        }
+      },
+      "Session": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" }, "requestId": { "type": "string" }, "conversationId": { "type": "string" },
+          "status": { "type": "string", "enum": ["running", "stopping", "synthesizing", "done", "stopped", "error"] },
+          "round": { "type": "integer" }, "maxRounds": { "type": "integer", "minimum": 1, "maximum": 100 },
+          "participants": { "type": "array", "items": { "type": "string" } },
+          "calls": { "type": "object", "properties": { "total": { "type": "integer" }, "byAgent": { "type": "object", "additionalProperties": { "type": "integer" } } } },
+          "stopReason": { "type": "string", "nullable": true },
+          "messages": { "type": "array", "items": { "$ref": "#/components/schemas/Message" } },
+          "synthesis": { "type": "string", "nullable": true },
+          "replayed": { "type": "boolean", "description": "true khi trả lại phiên cũ do trùng Idempotency-Key" }
+        }
+      }
+    },
+    "responses": {
+      "Err": { "description": "Lỗi có cấu trúc", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+    }
+  },
+  "paths": {
+    "/v1/agents": { "get": { "summary": "Danh sách AI/agent và trạng thái kết nối (scope read)", "responses": { "200": { "description": "OK" }, "401": { "$ref": "#/components/responses/Err" } } } },
+    "/v1/projects": { "get": { "summary": "Dự án được cấp quyền (scope read)", "responses": { "200": { "description": "OK" }, "401": { "$ref": "#/components/responses/Err" } } } },
+    "/v1/conversations": {
+      "get": { "summary": "Cuộc trò chuyện được cấp quyền (scope read)", "parameters": [{ "name": "projectId", "in": "query", "schema": { "type": "string" }, "description": "Rỗng = chưa thuộc dự án" }], "responses": { "200": { "description": "OK" } } },
+      "post": { "summary": "Tạo cuộc trò chuyện (scope write)", "requestBody": { "content": { "application/json": { "schema": { "type": "object", "properties": { "title": { "type": "string" }, "projectId": { "type": "string", "nullable": true } } } } } }, "responses": { "201": { "description": "Đã tạo" }, "403": { "$ref": "#/components/responses/Err" } } }
+    },
+    "/v1/conversations/{id}/sessions": {
+      "post": {
+        "summary": "Gửi chủ đề, bắt đầu phiên thảo luận (scope write)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "Idempotency-Key", "in": "header", "schema": { "type": "string", "maxLength": 200 }, "description": "Gửi lại cùng khóa + cùng nội dung trong 24 giờ sẽ trả về phiên cũ, không tạo phiên mới" }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["message", "maxRounds"], "properties": {
+          "message": { "type": "string", "maxLength": 20000 },
+          "participants": { "type": "array", "items": { "type": "string" }, "description": "ID agent; bỏ trống = tất cả đã kết nối" },
+          "maxRounds": { "type": "integer", "minimum": 1, "maximum": 100 } } } } } },
+        "responses": {
+          "202": { "description": "Phiên đã bắt đầu", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Session" } } } },
+          "200": { "description": "Trùng Idempotency-Key: trả lại phiên cũ" },
+          "400": { "$ref": "#/components/responses/Err" }, "409": { "$ref": "#/components/responses/Err" }, "429": { "$ref": "#/components/responses/Err" }
+        }
+      }
+    },
+    "/v1/sessions/{id}": { "get": { "summary": "Trạng thái và kết quả phiên (scope read)", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Session" } } } } } } },
+    "/v1/sessions/{id}/stop": { "post": { "summary": "Dừng phiên (scope control)", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } } },
+    "/v1/sessions/{id}/synthesize": { "post": { "summary": "Chốt ý: dừng thêm vòng, một AI tổng hợp (scope control)", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "202": { "description": "Đang chốt ý" } } } },
+    "/v1/sessions/{id}/synthesis": { "get": { "summary": "Lấy bản chốt ý (scope read)", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" }, "404": { "$ref": "#/components/responses/Err" } } } }
+  }
+}
