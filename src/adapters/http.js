@@ -62,19 +62,28 @@ class GeminiApiAdapter {
     if (!key) throw new AdapterError('auth', 'Chưa có API key Gemini');
     const base = this.cfg.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
     const url = `${base}/models/${encodeURIComponent(this.cfg.model)}:streamGenerateContent?alt=sse`;
-    const generationConfig = Object.assign({ maxOutputTokens }, this.cfg.generationConfig || {});
+    // Mặc định suy nghĩ ở mức thấp để tiết kiệm token (Gemini 3.x). Nếu model không nhận tham số này,
+    // gửi lại đúng một lần không kèm nó (cùng model, cùng bậc miễn phí).
+    const thinking = this.cfg.generationConfig ? null : { thinkingConfig: { thinkingLevel: this.cfg.thinkingLevel || 'low' } };
+    const send = (withThinking) => fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        // Token suy nghĩ cũng tính vào maxOutputTokens, nên chừa thêm chỗ khi bật suy nghĩ.
+        generationConfig: Object.assign({ maxOutputTokens: withThinking ? maxOutputTokens + 1024 : maxOutputTokens }, this.cfg.generationConfig || {}, withThinking ? thinking : {}),
+      }),
+      signal,
+    });
     let res;
     try {
-      res = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: system }] },
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig,
-        }),
-        signal,
-      });
+      res = await send(!!thinking);
+      if (res.status === 400 && thinking) {
+        const body = await res.text().catch(() => '');
+        if (/thinking/i.test(body)) res = await send(false);
+        else throw new AdapterError('error', `Gemini API trả về HTTP 400: ${body.slice(0, 300)}`);
+      }
       if (!res.ok) throw await httpError(res, 'Gemini API');
       let text = '';
       let usage = null;

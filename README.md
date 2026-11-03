@@ -20,7 +20,8 @@ Chạy kiểm thử: `npm test`.
 **Làm hết trên trình duyệt, không cần sửa file:** bấm **⚙ Kết nối AI** ở thanh bên (hoặc "Quản lý kết nối" cạnh danh sách AI).
 - **ChatGPT / Claude**: nút **Cài đặt** (chạy `npm install -g …` nếu máy chưa có CLI), nút **Đăng nhập** (chạy lệnh đăng nhập chính thức `codex login` / `claude auth login`, liên kết đăng nhập hiện ngay trên trang; nếu trang đăng nhập trả về mã thì dán vào ô bên dưới). Nút **Kiểm tra lại** đọc trạng thái đăng nhập mà không gọi AI, và cảnh báo nếu CLI đang đăng nhập bằng API key trả phí.
 - **Gemini**: dán API key, bấm **Lưu key**. Key lưu ở `data/settings.json` trên máy, không hiện lại trên trình duyệt.
-- Bật/tắt từng AI, đổi model, thêm agent ngoài, tạo/thu hồi khóa API cho agent khác.
+- **Đổi model**: chọn trong danh sách gợi ý (ghi rõ model nào miễn phí, model nào tốn hạn mức nhanh), bấm *Tải danh sách model từ nhà cung cấp* để lấy danh sách thật (Gemini, agent ngoài), hoặc chọn *Khác* để tự nhập. Đổi là lưu ngay. Codex có thêm *Mức suy luận*. Mặc định: Gemini `gemini-3.8-flash`, Claude `sonnet`, ChatGPT theo mặc định của gói.
+- Bật/tắt từng AI, thêm agent ngoài, tạo/thu hồi khóa API cho agent khác.
 - Nút **Cài đặt** và **Đăng nhập** chỉ bấm được trên chính máy chạy ứng dụng (không từ điện thoại). Ứng dụng không đọc hay lưu token đăng nhập; CLI tự lưu như khi bạn chạy trong Terminal.
 - Nếu nút Đăng nhập không hiện liên kết (một số CLI cần Terminal thật): mở Terminal chạy `codex login` hoặc `claude` rồi `/login`, sau đó bấm **Kiểm tra lại**.
 

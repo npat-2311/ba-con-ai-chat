@@ -149,6 +149,59 @@
     card.append(row);
   }
 
+  const liveModels = {}; // agentId -> danh sách tải từ nhà cung cấp
+
+  // Chọn model: đổi là lưu ngay. Có gợi ý theo tài liệu, danh sách thật (nếu tải được) và ô tự nhập.
+  function modelPicker(a) {
+    const box = el('div', 'model-picker');
+    const opts = [...(liveModels[a.id] || []), ...a.suggestions.models];
+    const seen = new Set();
+    const list = opts.filter((m) => (seen.has(m.id) ? false : seen.add(m.id)));
+    if (a.model && !seen.has(a.model)) list.unshift({ id: a.model, note: 'Đang dùng' });
+    const sel = el('select');
+    for (const m of list) {
+      const o = el('option', null, `${m.id || '(mặc định)'}${m.note ? ` — ${m.note}` : ''}`);
+      o.value = m.id;
+      sel.append(o);
+    }
+    const other = el('option', null, 'Khác (tự nhập)…');
+    other.value = '__other__';
+    sel.append(other);
+    sel.value = a.model || '';
+    if (sel.value !== (a.model || '')) sel.value = '__other__';
+    const custom = input(a.model, { placeholder: 'Tên model' });
+    const customRow = el('div', 'row');
+    customRow.append(custom, button('Lưu model', () => patch(a, { model: custom.value })));
+    customRow.hidden = sel.value !== '__other__';
+    sel.addEventListener('change', () => {
+      if (sel.value === '__other__') { customRow.hidden = false; custom.focus(); return; }
+      customRow.hidden = true;
+      patch(a, { model: sel.value });
+    });
+    box.append(field('Model', sel, a.model ? `Đang dùng: ${a.model}. Đổi là lưu ngay; model lớn tốn hạn mức nhanh hơn.` : 'Đổi là lưu ngay; model lớn tốn hạn mức nhanh hơn.'), customRow);
+
+    if (a.canListModels) {
+      box.append(button('Tải danh sách model từ nhà cung cấp', async () => {
+        const r = await guard(() => api('GET', `/api/settings/agents/${a.id}/models`));
+        if (r) { liveModels[a.id] = r.models; render(); }
+      }));
+      if (liveModels[a.id]) box.append(msg(`Đã tải ${liveModels[a.id].length} model từ nhà cung cấp.`, 'muted'));
+    }
+
+    if (a.suggestions.efforts.length) {
+      const eff = el('select');
+      for (const e of a.suggestions.efforts) {
+        const o = el('option', null, e.note);
+        o.value = e.id;
+        eff.append(o);
+      }
+      eff.value = a.reasoningEffort || 'low';
+      eff.addEventListener('change', () => patch(a, { reasoningEffort: eff.value }));
+      box.append(field('Mức suy luận', eff));
+    }
+    return box;
+  }
+
   function agentCard(a) {
     const card = el('div', `card status-${a.status}`);
     const head = el('div', 'card-head');
@@ -178,10 +231,9 @@
     }
 
     if (a.type !== 'mock') {
-      const model = input(a.model, { placeholder: a.preset === 'codex' ? 'Để trống = mặc định của gói' : '' });
-      card.append(field('Model', model, a.preset === 'claude' ? 'Ví dụ: sonnet, haiku, opus. Model lớn tốn hạn mức nhanh hơn.' : ''));
+      card.append(modelPicker(a));
       const row = el('div', 'row');
-      row.append(button('Lưu', () => patch(a, Object.assign({ model: model.value }, card._base ? { baseUrl: card._base.value } : {}))));
+      if (card._base) row.append(button('Lưu địa chỉ', () => patch(a, { baseUrl: card._base.value })));
       if (a.status !== 'not_connected') {
         row.append(button('Kiểm tra kết nối (1 lượt gọi)', async () => {
           await guard(() => api('POST', `/api/agents/${a.id}/test`));

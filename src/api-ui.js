@@ -16,6 +16,8 @@ function str(v, max, field) {
 
 const LOOPBACK_ADDR = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 
+const { suggestionsFor, listModels } = require('./models');
+
 function makeUiApi({ store, orch, settings, jobs, authStatus, rebuild }) {
   // Cài đặt CLI / đăng nhập chỉ được bấm từ chính máy chạy server, không từ điện thoại hay máy khác.
   const localOnly = (req) => {
@@ -35,6 +37,8 @@ function makeUiApi({ store, orch, settings, jobs, authStatus, rebuild }) {
         costSource: a.costSource || '',
         simulated: a.type === 'mock',
         canLogin: a.type === 'cli' && ['codex', 'claude'].includes(a.preset),
+        suggestions: suggestionsFor(a),
+        canListModels: a.type === 'gemini-api' || a.type === 'openai-compat',
       })),
       apiKeys: settings.publicApiKeys(),
       projects: store.data.projects.map((p) => ({ id: p.id, name: p.name })),
@@ -158,6 +162,9 @@ function makeUiApi({ store, orch, settings, jobs, authStatus, rebuild }) {
       if (!settings.removeCustomAgent(params.id)) throw bad('Chỉ xóa được agent bạn tự thêm');
       rebuild([params.id]);
       return settingsView();
+    }],
+    ['GET', '/api/settings/agents/:id/models', async ({ params }) => {
+      try { return { models: await listModels(agentCfg(params.id)) }; } catch (e) { throw bad(e.message); }
     }],
     ['GET', '/api/settings/agents/:id/auth-status', async ({ params }) => authStatus(agentCfg(params.id))],
     ['POST', '/api/settings/agents/:id/jobs', ({ params, body, req }) => {
