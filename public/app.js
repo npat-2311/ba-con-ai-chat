@@ -42,6 +42,8 @@
 
   function showError(msg) {
     $('error').textContent = msg || '';
+    const se = document.getElementById('settingsError');
+    if (se) se.textContent = msg || '';
   }
 
   async function guard(fn) {
@@ -103,7 +105,7 @@
   function convItem(c) {
     const row = el('div', `item conv${c.id === S.currentId ? ' active' : ''}${c.archived ? ' archived' : ''}`);
     const name = el('button', 'name', `${c.pinned ? '📌 ' : ''}${c.title}`);
-    name.addEventListener('click', () => { openConversation(c.id); closeSidebar(); });
+    name.addEventListener('click', () => { if (window.PCSettings) window.PCSettings.close(); openConversation(c.id); closeSidebar(); });
     row.append(name, menuButton(() => convMenu(c)));
     return row;
   }
@@ -274,6 +276,9 @@
       }
       box.append(chip);
     }
+    const manage = el('button', 'link manage', S.agents.length ? 'Quản lý kết nối' : 'Chưa có AI nào được bật — mở trang Kết nối AI');
+    manage.addEventListener('click', () => window.PCSettings && window.PCSettings.open());
+    box.append(manage);
   }
 
   async function toggleParticipant(id, on) {
@@ -397,9 +402,10 @@
   }
 
   function renderHeader() {
-    $('convTitle').textContent = S.conv ? S.conv.title : 'Chưa chọn cuộc trò chuyện';
+    const inSettings = !$('settingsView').hidden;
+    $('convTitle').textContent = inSettings ? 'Kết nối AI' : S.conv ? S.conv.title : 'Chưa chọn cuộc trò chuyện';
     const p = S.conv && S.conv.projectId && S.projects.find((x) => x.id === S.conv.projectId);
-    $('convSub').textContent = S.conv ? (p ? `Dự án: ${p.name}` : 'Chưa thuộc dự án') : '';
+    $('convSub').textContent = inSettings ? 'Bật/tắt, đăng nhập và nhập key cho từng AI' : S.conv ? (p ? `Dự án: ${p.name}` : 'Chưa thuộc dự án') : '';
     const sum = S.conv && S.conv.summary && S.conv.summary.text;
     $('summaryBox').hidden = !sum;
     if (sum) $('summaryText').innerHTML = window.renderMarkdown(sum);
@@ -536,6 +542,8 @@
     $('closeSidebar').addEventListener('click', closeSidebar);
     $('backdrop').addEventListener('click', closeSidebar);
   }
+
+  window.PC = { api, el, dialog, guard, loadState, closeSidebar, $, state: S, AGENT_STATUS };
 
   // Mở trang: chỉ tải dữ liệu, không gọi AI.
   async function init() {

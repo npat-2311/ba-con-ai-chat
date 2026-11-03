@@ -9,14 +9,22 @@ Phòng chat cá nhân: bạn gửi một tin, Gemini, ChatGPT và Claude (cùng 
 ## 1. Khởi động
 
 ```bash
-cp config.example.json config.json     # config.json đã nằm trong .gitignore
-npm start                               # mở http://127.0.0.1:8787
+npm start          # mở http://127.0.0.1:8787, rồi bấm ⚙ Kết nối AI
 ```
 
-Thử giao diện không tốn hạn mức: `npm run mock` (3 AI giả lập, dữ liệu riêng ở `data/mock-db.json`).
+Không cần tạo `config.json` (tùy chọn, xem `config.example.json`). Thử giao diện không tốn hạn mức: `npm run mock` (3 AI giả lập, dữ liệu riêng ở `data/mock-db.json`).
 Chạy kiểm thử: `npm test`.
 
 ## 2. Kết nối từng AI
+
+**Làm hết trên trình duyệt, không cần sửa file:** bấm **⚙ Kết nối AI** ở thanh bên (hoặc "Quản lý kết nối" cạnh danh sách AI).
+- **ChatGPT / Claude**: nút **Cài đặt** (chạy `npm install -g …` nếu máy chưa có CLI), nút **Đăng nhập** (chạy lệnh đăng nhập chính thức `codex login` / `claude auth login`, liên kết đăng nhập hiện ngay trên trang; nếu trang đăng nhập trả về mã thì dán vào ô bên dưới). Nút **Kiểm tra lại** đọc trạng thái đăng nhập mà không gọi AI, và cảnh báo nếu CLI đang đăng nhập bằng API key trả phí.
+- **Gemini**: dán API key, bấm **Lưu key**. Key lưu ở `data/settings.json` trên máy, không hiện lại trên trình duyệt.
+- Bật/tắt từng AI, đổi model, thêm agent ngoài, tạo/thu hồi khóa API cho agent khác.
+- Nút **Cài đặt** và **Đăng nhập** chỉ bấm được trên chính máy chạy ứng dụng (không từ điện thoại). Ứng dụng không đọc hay lưu token đăng nhập; CLI tự lưu như khi bạn chạy trong Terminal.
+- Nếu nút Đăng nhập không hiện liên kết (một số CLI cần Terminal thật): mở Terminal chạy `codex login` hoặc `claude` rồi `/login`, sau đó bấm **Kiểm tra lại**.
+
+`config.json` vẫn dùng được cho cấu hình nâng cao; chỉnh sửa trên giao diện được ưu tiên hơn.
 
 Trạng thái trên giao diện: **Chưa kết nối** (thiếu CLI/khóa) · **Chưa xác minh** (đã cấu hình, chưa có lượt gọi thành công) · **Đã kết nối** · **Lỗi kết nối** (lỗi xác thực/hết hạn mức; AI đó bị ngừng dùng tới khi bạn bấm ⟳ kiểm tra lại).
 Nút ⟳ cạnh tên AI gửi **1 lượt gọi ngắn** để xác minh.
@@ -64,7 +72,7 @@ Server từ chối chạy ngoài localhost nếu chưa đặt `uiPassword` (ho�
 
 Mô tả OpenAPI: [`docs/openapi.json`](docs/openapi.json) (cũng có tại `GET /v1/openapi.json`). Ví dụ chạy được: [`examples/goi-api.sh`](examples/goi-api.sh).
 
-Tạo khóa trong `config.json > apiKeys` (chuỗi ngẫu nhiên ≥ 24 ký tự, ví dụ `node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"`):
+Tạo khóa ngay trên trang **⚙ Kết nối AI** (khóa chỉ hiện một lần, lưu dạng mã băm), hoặc trong `config.json > apiKeys` (chuỗi ngẫu nhiên ≥ 24 ký tự, ví dụ `node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"`):
 
 ```json
 { "id": "agent-cua-toi", "key": "<chuỗi ngẫu nhiên>", "scopes": ["read", "write", "control"],
@@ -124,6 +132,8 @@ src/adapters/           cli.js (Codex, Claude Code, agy, lệnh tùy chỉnh), h
 src/api-ui.js           API cho giao diện
 src/api-v1.js           API cho agent ngoài (xác thực, phạm vi, idempotency, giới hạn)
 src/store.js            Lưu file JSON cục bộ (data/db.json)
+src/settings.js         Cài đặt chỉnh từ giao diện (data/settings.json): bật/tắt, model, key, agent ngoài, khóa API
+src/jobs.js             Chạy lệnh đăng nhập/cài đặt chính thức của CLI từ nút bấm
 public/                 Giao diện HTML/CSS/JS thuần
 test/                   Kiểm thử bằng kết nối giả lập
 ```
@@ -132,7 +142,8 @@ test/                   Kiểm thử bằng kết nối giả lập
 
 | Hạng mục | Tình trạng |
 |---|---|
-| Bộ điều phối, dừng, dừng sớm, chốt ý, giới hạn vòng, lưu trữ, API `/v1` | ✅ Đã kiểm tra bằng **kết nối giả lập** (`npm test`, 23 bài) và trình duyệt (máy tính + iPhone 13 giả lập) |
+| Bộ điều phối, dừng, dừng sớm, chốt ý, giới hạn vòng, lưu trữ, API `/v1`, trang Kết nối AI | ✅ Đã kiểm tra bằng **kết nối giả lập** (`npm test`, 29 bài) và trình duyệt (máy tính + iPhone 13 giả lập) |
+| Nút Đăng nhập (chạy `codex login` / `claude auth login`) | ⚠️ Kiểm tra bằng CLI giả lập; luồng đăng nhập thật của từng CLI chưa thử (cần tài khoản của bạn) |
 | Bộ đọc đầu ra Claude Code (`stream-json`) và Codex (`--json`) | ✅ Theo tài liệu + `--help`; kiểm tra bằng script giả lập sự kiện mẫu. ❌ **Chưa gọi thật** |
 | Gemini API (`streamGenerateContent`, SSE) | ✅ Theo tài liệu. ❌ **Chưa gọi thật** |
 | Antigravity CLI (`agy`) | ⚠️ Chỉ theo tài liệu; không tải được CLI để kiểm tra; định dạng sự kiện là giả định; rủi ro điều khoản |

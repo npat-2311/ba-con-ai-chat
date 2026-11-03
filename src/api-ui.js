@@ -14,7 +14,33 @@ function str(v, max, field) {
   return v.slice(0, max);
 }
 
-function makeUiApi({ store, orch }) {
+const LOOPBACK_ADDR = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
+function makeUiApi({ store, orch, settings, jobs, authStatus, rebuild }) {
+  // Cài đặt CLI / đăng nhập chỉ được bấm từ chính máy chạy server, không từ điện thoại hay máy khác.
+  const localOnly = (req) => {
+    if (!LOOPBACK_ADDR.has(req.socket.remoteAddress)) throw bad('Thao tác này chỉ làm được trên chính máy đang chạy ứng dụng');
+  };
+  const agentCfg = (id) => {
+    const a = settings.effectiveAgents().find((x) => x.id === id);
+    if (!a) throw notFound('AI/agent');
+    return a;
+  };
+  const settingsView = () => {
+    const live = new Map(orch.agents().map((a) => [a.id, a]));
+    return {
+      agents: settings.effectiveAgents().map((a) => Object.assign(settings.publicAgent(a), {
+        status: a.disabled ? 'disabled' : (live.get(a.id) || {}).status || 'not_connected',
+        detail: (live.get(a.id) || {}).detail || '',
+        costSource: a.costSource || '',
+        simulated: a.type === 'mock',
+        canLogin: a.type === 'cli' && ['codex', 'claude'].includes(a.preset),
+      })),
+      apiKeys: settings.publicApiKeys(),
+      projects: store.data.projects.map((p) => ({ id: p.id, name: p.name })),
+    };
+  };
+  const wrap = (fn) => { try { return fn(); } catch (e) { if (e.status) throw e; throw bad(e.message); } };
   const convSummary = (c) => ({
     id: c.id, projectId: c.projectId, title: c.title, pinned: c.pinned, archived: c.archived,
     settings: c.settings, updatedAt: c.updatedAt, createdAt: c.createdAt,
@@ -114,13 +140,50 @@ function makeUiApi({ store, orch }) {
     ['POST', '/api/sessions/:id/synthesize', ({ params }) => orch.publicSession(orch.synthesize(params.id))],
     ['PATCH', '/api/sessions/:id', ({ params, body }) => orch.publicSession(orch.setMaxRounds(params.id, body.maxRounds))],
     ['POST', '/api/agents/:id/test', ({ params }) => orch.testAgent(params.id)],
+
+    // ---- Trang Kết nối ----
+    ['GET', '/api/settings', () => settingsView()],
+    ['PATCH', '/api/settings/agents/:id', ({ params, body }) => {
+      agentCfg(params.id);
+      wrap(() => settings.patchAgent(params.id, body));
+      rebuild([params.id]);
+      return settingsView();
+    }],
+    ['POST', '/api/settings/agents', ({ body }) => {
+      const id = wrap(() => settings.addCustomAgent(body));
+      rebuild([id]);
+      return settingsView();
+    }],
+    ['DELETE', '/api/settings/agents/:id', ({ params }) => {
+      if (!settings.removeCustomAgent(params.id)) throw bad('Chỉ xóa được agent bạn tự thêm');
+      rebuild([params.id]);
+      return settingsView();
+    }],
+    ['GET', '/api/settings/agents/:id/auth-status', async ({ params }) => authStatus(agentCfg(params.id))],
+    ['POST', '/api/settings/agents/:id/jobs', ({ params, body, req }) => {
+      localOnly(req);
+      if (!['login', 'loginDevice', 'install'].includes(body.kind)) throw bad('kind không hợp lệ');
+      return wrap(() => jobs.start(agentCfg(params.id), body.kind));
+    }],
+    ['GET', '/api/jobs/:id', ({ params }) => jobs.get(params.id) || (() => { throw notFound('thao tác'); })()],
+    ['POST', '/api/jobs/:id/input', ({ params, body, req }) => { localOnly(req); return { ok: jobs.input(params.id, String(body.text || '')) }; }],
+    ['POST', '/api/jobs/:id/cancel', ({ params }) => {
+      const ok = jobs.cancel(params.id);
+      rebuild([]);
+      return { ok };
+    }],
+    ['POST', '/api/settings/api-keys', ({ body }) => wrap(() => settings.createApiKey(body))],
+    ['DELETE', '/api/settings/api-keys/:id', ({ params }) => {
+      if (!settings.revokeApiKey(params.id)) throw notFound('khóa');
+      return settingsView();
+    }],
   ]);
 
   return async function handle(req, res, url) {
     const match = routes(req.method, url.pathname);
     if (!match) return false;
     const body = ['POST', 'PATCH', 'PUT'].includes(req.method) ? await readJson(req) : {};
-    const result = await match.handler({ params: match.params, body, query: url.searchParams });
+    const result = await match.handler({ params: match.params, body, query: url.searchParams, req });
     send(res, 200, result);
     return true;
   };
